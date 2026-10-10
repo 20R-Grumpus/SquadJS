@@ -131,9 +131,29 @@ export default class SquadRcon extends Rcon {
 
   async getCurrentMap() {
     const response = await this.execute('ShowCurrentMap');
-    const match = response.match(/^Current level is ([^,]*), layer is ([^,]*)/);
-    return { level: match[1], layer: match[2] };
+    Logger.verbose('SquadRcon', 1, `ShowCurrentMap response: ${response}`);
+
+    if (!response) return { level: null, layer: null };
+
+    // Adjusted regex to handle trailing info after layer name
+    const match = response.match(/^Current level is ([^,]+), layer is ([^,\s]+)(?:,.*)?$/);
+
+    if (!match) {
+      Logger.error('SquadRcon', `getCurrentMap: Unexpected response format: ${response}`);
+      return { level: null, layer: null };
+    }
+
+    const level = match[1];
+    let layer = match[2];
+
+    if (!layer || layer.toLowerCase() === 'unknown') {
+      layer = null;
+    }
+
+    return { level, layer };
   }
+
+
 
   async getNextMap() {
     const response = await this.execute('ShowNextMap');
@@ -144,6 +164,7 @@ export default class SquadRcon extends Rcon {
       toBeVoted: match ? match[2] === 'To be voted' : false
     };
   }
+
 
   async getListPlayers() {
     const response = await this.execute('ListPlayers');
